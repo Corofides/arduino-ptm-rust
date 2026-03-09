@@ -11,11 +11,13 @@ use avr_device::{
 
 static BUTTON: Mutex<RefCell<Option<Button>>> = Mutex::new(RefCell::new(None));
 
-pub struct Button {
+pub struct Button
+{
     pub pin: u8,
     pub was_high: bool,
     pub can_change: bool,
     pub port_control: PortControl,
+    pub on_press_handle: fn(&PortControl),
 }
 
 pub struct PortControl {
@@ -53,7 +55,8 @@ impl Button {
         self.can_change = true;
     }
     pub fn on_press(&self) {
-        self.port_control.port.pinb.write(|w| w.pb5().set_bit());
+        (self.on_press_handle)(&self.port_control);
+        //self.port_control.port.pinb.write(|w| w.pb5().set_bit());
     }
 }
 
@@ -102,11 +105,19 @@ fn main() -> ! {
         exint: dp.EXINT,
     };
 
+    let on_press_handle = |port_control: &PortControl| {
+        port_control.port.pinb.write(|w| w.pb5().set_bit());
+        // Do nothing
+    };
+
+    let on_press_handle: fn(port_control: &PortControl) -> () = on_press_handle;
+
     let mut button = Button {
         pin: 8,
         was_high: false,
         can_change: true,
         port_control,
+        on_press_handle,
     };
 
     button.setup();
