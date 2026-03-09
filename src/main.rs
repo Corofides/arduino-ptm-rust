@@ -32,8 +32,28 @@ impl Button {
             w.pcint().bits(0b001)
         });
     }
+    pub fn on_interrupt(&mut self) {
+        // Early exit if we can't change.
+        if !self.can_change {
+            return;
+        }
+
+        self.can_change = false;
+
+        if !self.was_high {
+            self.was_high = true;
+            return;
+        }
+
+        self.was_high = false;
+        self.on_press();
+
+    }
     pub fn allow_change(&mut self) {
         self.can_change = true;
+    }
+    pub fn on_press(&self) {
+        self.port_control.port.pinb.write(|w| w.pb5().set_bit());
     }
 }
 
@@ -44,7 +64,7 @@ fn TIMER0_OVF() {
 
     let mut button = BUTTON.borrow(cs).borrow_mut();
 
-    if let Some(mut button) = button.as_mut() {
+    if let Some(button) = button.as_mut() {
         button.allow_change();
     }
 
@@ -52,6 +72,13 @@ fn TIMER0_OVF() {
 
 #[avr_device::interrupt(atmega328p)]
 fn PCINT0() {
+    let cs = unsafe { CriticalSection::new() };
+
+    let mut button = BUTTON.borrow(cs).borrow_mut();
+
+    if let Some(button) = button.as_mut() {
+        button.on_interrupt();
+    }
 }
 
 #[avr_device::entry]
