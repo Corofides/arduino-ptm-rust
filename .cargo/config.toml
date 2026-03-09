@@ -1,0 +1,17 @@
+[build]
+# Use the built-in LLVM target name instead of a file path
+target = "avr-none"
+
+rustflags = [
+    # Explicitly define the CPU and features for the compiler
+    "-C", "target-cpu=atmega328p",
+    #"-C", "target-feature=+avr5,+sram",
+    "-C", "link-arg=-mmcu=atmega328p",
+]
+
+[unstable]
+build-std = ["core"]
+
+[target.avr-atmega328p]
+linker = "avr-gcc"
+
