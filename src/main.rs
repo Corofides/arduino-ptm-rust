@@ -13,7 +13,7 @@ static BUTTON: Mutex<RefCell<Option<Button>>> = Mutex::new(RefCell::new(None));
 
 pub struct Button
 {
-    pub pin: u8,
+    pub port: u8,
     pub was_high: bool,
     pub can_change: bool,
     pub port_control: PortControl,
@@ -28,10 +28,10 @@ pub struct PortControl {
 impl Button {
     pub fn setup(&mut self) {
         self.port_control.exint.pcicr.write(|w| {
-            w.pcie().bits(0b001)
+            w.pcie().bits(self.port)
         });
         self.port_control.exint.pcmsk0.write(|w| {
-            w.pcint().bits(0b001)
+            w.pcint().bits(self.port)
         });
     }
     pub fn on_interrupt(&mut self) {
@@ -56,7 +56,6 @@ impl Button {
     }
     pub fn on_press(&self) {
         (self.on_press_handle)(&self.port_control);
-        //self.port_control.port.pinb.write(|w| w.pb5().set_bit());
     }
 }
 
@@ -113,7 +112,7 @@ fn main() -> ! {
     let on_press_handle: fn(port_control: &PortControl) -> () = on_press_handle;
 
     let mut button = Button {
-        pin: 8,
+        port: 0b001,
         was_high: false,
         can_change: true,
         port_control,
