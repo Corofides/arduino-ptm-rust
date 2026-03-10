@@ -17,7 +17,9 @@ pub struct Button
     pub was_high: bool,
     pub can_change: bool,
     pub port_control: PortControl,
-    pub on_press_handle: fn(&PortControl),
+    pub on_click_handle: Option<fn(&PortControl)>,
+    pub on_press_handle: Option<fn(&PortControl)>,
+    pub on_release_handle: Option<fn(&PortControl)>,
 }
 
 pub struct PortControl {
@@ -35,7 +37,6 @@ impl Button {
         });
     }
     pub fn on_interrupt(&mut self) {
-        // Early exit if we can't change.
         if !self.can_change {
             return;
         }
@@ -44,18 +45,26 @@ impl Button {
 
         if !self.was_high {
             self.was_high = true;
+
+            if let Some(on_press) = self.on_press_handle {
+                (on_press)(&self.port_control)
+            }
             return;
         }
 
         self.was_high = false;
-        self.on_press();
+
+        if let Some(on_release) = self.on_release_handle {
+            (on_release)(&self.port_control);
+        }
+
+        if let Some(on_click) = self.on_click_handle {
+            (on_click)(&self.port_control);
+        }
 
     }
     pub fn allow_change(&mut self) {
         self.can_change = true;
-    }
-    pub fn on_press(&self) {
-        (self.on_press_handle)(&self.port_control);
     }
 }
 
@@ -104,19 +113,20 @@ fn main() -> ! {
         exint: dp.EXINT,
     };
 
-    let on_press_handle = |port_control: &PortControl| {
+    let on_click_handle = |port_control: &PortControl| {
         port_control.port.pinb.write(|w| w.pb5().set_bit());
-        // Do nothing
     };
 
-    let on_press_handle: fn(port_control: &PortControl) -> () = on_press_handle;
+    let on_click_handle: fn(port_control: &PortControl) -> () = on_click_handle;
 
     let mut button = Button {
         port: 0b001,
         was_high: false,
         can_change: true,
         port_control,
-        on_press_handle,
+        on_press_handle: None, 
+        on_release_handle: None,
+        on_click_handle: Some(on_click_handle)
     };
 
     button.setup();
